@@ -1,4 +1,4 @@
-gameKey Firmware
+# gameKey Firmware #
 
 This is the firmware designed to run on the gameKey Main Control PCB. It's a standard Arduino sketch, and only relies on built in libraries plus Matthew Heironimus's Arduino joystick library for 32u4 based Arduino boards found at https://github.com/MHeironimus/ArduinoJoystickLibrary.
 
