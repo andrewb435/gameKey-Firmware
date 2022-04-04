@@ -428,8 +428,10 @@ void cmdReportButtons() {
 		Serial.print(i);
 		Serial.print("=");
 		Serial.print(int(controller.buttons[i].getKeymap()));
+		Serial.print("&");
+		Serial.print(int(controller.buttons[i].getControlType()));
 		if (i < ((HW_COLS*HW_ROWS)-1)) {
-			Serial.print("&");
+			Serial.print("|");
 		}
 	}
 	Serial.println();
