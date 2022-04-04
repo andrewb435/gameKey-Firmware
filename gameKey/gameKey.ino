@@ -136,37 +136,38 @@ void loop() {
 		controller.update();
 		//Button Processing
 		for (int i = 0; i < (HW_COLS * HW_ROWS); i++) {
-			if (controller.getGamepadMode()) {	// true = gamepad mode
-				// TODO: Future gamepad button code
-				//this is not how it should be done
-				//gamepad.setButton(i, controller.buttons[i].getCurrentState());
-			} else {	// false = keyboard mode
-				if (controller.buttons[i].getCurrentState()) {	// If the button IS PRESSED
-					if (!controller.buttons[i].getPreviousState()) {	// and it WAS NOT PRESSED
-						if (flagSerialDebug) {
-							Serial.print(F("Button state changed to pressed for button"));
-							Serial.print(i);
-							Serial.print(F(", pressing kb key \""));
-							Serial.print(controller.buttons[i].getKeymap());
-							Serial.println("\"");
-						}
-						if (!flagConfigMode) {
-							// Only actually press when not in config mode
+			if (controller.buttons[i].getCurrentState()) {	// If the button IS PRESSED
+				if (!controller.buttons[i].getPreviousState()) {	// and it WAS NOT PRESSED
+					if (flagSerialDebug) {
+						Serial.print(F("Button state changed to pressed for button"));
+						Serial.print(i);
+						Serial.print(F(", pressing kb key \""));
+						Serial.print(controller.buttons[i].getKeymap());
+						Serial.println("\"");
+					}
+					if (!flagConfigMode) {
+						// Only actually press when not in config mode
+						if (controller.buttons[i].getControlType() == KEYB || controller.buttons[i].getControlType() == BOTH) {
 							Keyboard.press(controller.buttons[i].getKeymap());	// send the keymap char
 						}
-						controller.buttons[i].stateSync();	// sync the previous state to current
-					}
-				} else if (!controller.buttons[i].getCurrentState()){	// If the button is NOT PRESSED
-					if (controller.buttons[i].getPreviousState()) {	// and it WAS PRESSED
-						if (flagSerialDebug) {
-							Serial.print(F("Button state changed to unpressed for button"));
-							Serial.println(i);
+						if (controller.buttons[i].getControlType() == GPAD || controller.buttons[i].getControlType() == BOTH) {
+							// TODO: Actually send gamepad button
+							// send the joystick function
 						}
-						Keyboard.release(controller.buttons[i].getKeymap());	// release the keymap char
-						controller.buttons[i].stateSync();	// sync the previous state to current
 					}
+					controller.buttons[i].stateSync();	// sync the previous state to current
 				}
-			}			
+			} else if (!controller.buttons[i].getCurrentState()){	// If the button is NOT PRESSED
+				if (controller.buttons[i].getPreviousState()) {	// and it WAS PRESSED
+					if (flagSerialDebug) {
+						Serial.print(F("Button state changed to unpressed for button"));
+						Serial.println(i);
+					}
+					Keyboard.release(controller.buttons[i].getKeymap());	// release the keymap char
+					// TODO: Also release joystick button
+					controller.buttons[i].stateSync();	// sync the previous state to current
+				}
+			}	
 		}
 		//Analog Processing
 		for (int8_t analogIndex = 0; analogIndex < HW_AXES; analogIndex++) {
