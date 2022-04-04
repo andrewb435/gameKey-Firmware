@@ -359,8 +359,6 @@ void cliParse(char* buffer_in, uint8_t length_in) {
 		cmdBind(args[1]);
 	} else if (!strcmp(args[0], "unbind")) {	// Receive and parse unbind commands
 		cmdUnbind(args[1]);
-	} else if (!strcmp(args[0], "btnmode")) {	// Receive and parse button mode commands
-		cmdButtonMode(args[1]);
 	} else if (!strcmp(args[0], "reporta")) {	// report current analog values
 		cmdReportAnalog();
 	} else if (!strcmp(args[0], "setaxis")) {	// report current analog values
@@ -479,9 +477,11 @@ void cmdBind(char* arg) {
 			if (bindIndex == 0) {
 				bindCmdArgs[bindIndex][BIND_BUTTON] = atoi(strtok(arg, "="));
 				bindCmdArgs[bindIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_MODE] = atoi(strtok(NULL, "|"));
 			} else {
 				bindCmdArgs[bindIndex][BIND_BUTTON] = atoi(strtok(NULL, "="));
 				bindCmdArgs[bindIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_MODE] = atoi(strtok(NULL, "|"));
 			}
 			if (bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
 				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(bindCmdArgs[bindIndex][BIND_ARG]);
@@ -490,6 +490,8 @@ void cmdBind(char* arg) {
 					Serial.print(int(bindCmdArgs[bindIndex][BIND_BUTTON]));
 					Serial.print(F("="));
 					Serial.print(int(bindCmdArgs[bindIndex][BIND_ARG]));
+					Serial.print(F("&"));
+					Serial.print(int(bindCmdArgs[bindIndex][BIND_MODE]));
 				}
 			}
 		}
@@ -517,37 +519,6 @@ void cmdUnbind(char* arg) {
 				if (flagSerialDebug) {
 					Serial.print(F(" b"));
 					Serial.print(unbindCmdArgs[unbindIndex][BIND_BUTTON]);
-				}
-			}
-		}
-		if (flagSerialDebug) {
-			Serial.println();
-		}
-	}
-}
-
-void cmdButtonMode(char* arg) {
-	uint8_t modeCmdArgs[MAX_BIND_COMMANDS][BIND_CMD_SEGMENTS] = {NULL, NULL};
-	if (arg != "\0") {
-		if (flagSerialDebug) {
-			Serial.print(F("Binding buttons"));
-		}
-		for (uint8_t modeIndex = 0; modeIndex < MAX_BIND_COMMANDS; modeIndex++) {
-			// Split off each individual passed bind argument, delim by & for blocks and = for cmd/arg
-			if (modeIndex == 0) {
-				modeCmdArgs[modeIndex][BIND_BUTTON] = atoi(strtok(arg, "="));
-				modeCmdArgs[modeIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
-			} else {
-				modeCmdArgs[modeIndex][BIND_BUTTON] = atoi(strtok(NULL, "="));
-				modeCmdArgs[modeIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
-			}
-			if (modeCmdArgs[modeIndex][BIND_ARG] != NULL) {
-				controller.buttons[modeCmdArgs[modeIndex][BIND_BUTTON]].putControlType((keyType)modeCmdArgs[modeIndex][BIND_ARG]);
-				if (flagSerialDebug) {
-					Serial.print(F(" b"));
-					Serial.print(int(modeCmdArgs[modeIndex][BIND_BUTTON]));
-					Serial.print(F("="));
-					Serial.print(int(modeCmdArgs[modeIndex][BIND_ARG]));
 				}
 			}
 		}
