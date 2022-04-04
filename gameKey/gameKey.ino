@@ -470,7 +470,7 @@ void cmdBind(char* arg) {
 	uint8_t bindCmdArgs[MAX_BIND_COMMANDS][BIND_CMD_SEGMENTS] = {NULL, NULL};
 	if (arg != "\0") {
 		if (flagSerialDebug) {
-			Serial.print(F("Binding buttons"));
+			Serial.print(F("Binding buttons "));
 		}
 		for (uint8_t bindIndex = 0; bindIndex < MAX_BIND_COMMANDS; bindIndex++) {
 			// Split off each individual passed bind argument, delim by & for blocks and = for cmd/arg
@@ -478,13 +478,30 @@ void cmdBind(char* arg) {
 				bindCmdArgs[bindIndex][BIND_BUTTON] = atoi(strtok(arg, "="));
 				bindCmdArgs[bindIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
 				bindCmdArgs[bindIndex][BIND_MODE] = atoi(strtok(NULL, "|"));
+				// if (flagSerialDebug && bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
+				// 	Serial.print(F("  BIND_BUTTON:"));
+				// 	Serial.print(bindCmdArgs[bindIndex][BIND_BUTTON]);
+				// 	Serial.print(F("  BIND_ARG:"));
+				// 	Serial.print(bindCmdArgs[bindIndex][BIND_ARG]);
+				// 	Serial.print(F("  BIND_MODE:"));
+				// 	Serial.println(bindCmdArgs[bindIndex][BIND_MODE]);
+				// }
 			} else {
 				bindCmdArgs[bindIndex][BIND_BUTTON] = atoi(strtok(NULL, "="));
 				bindCmdArgs[bindIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
 				bindCmdArgs[bindIndex][BIND_MODE] = atoi(strtok(NULL, "|"));
+				// if (flagSerialDebug && bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
+				// 	Serial.print(F("  BIND_BUTTON:"));
+				// 	Serial.print(bindCmdArgs[bindIndex][BIND_BUTTON]);
+				// 	Serial.print(F("  BIND_ARG:"));
+				// 	Serial.print(bindCmdArgs[bindIndex][BIND_ARG]);
+				// 	Serial.print(F("  BIND_MODE:"));
+				// 	Serial.println(bindCmdArgs[bindIndex][BIND_MODE]);
+				// }
 			}
 			if (bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
 				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(bindCmdArgs[bindIndex][BIND_ARG]);
+				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putControlType((keyType)bindCmdArgs[bindIndex][BIND_MODE]);
 				if (flagSerialDebug) {
 					Serial.print(F(" b"));
 					Serial.print(int(bindCmdArgs[bindIndex][BIND_BUTTON]));
