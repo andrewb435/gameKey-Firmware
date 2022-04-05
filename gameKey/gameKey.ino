@@ -115,6 +115,23 @@ void setup() {
 	pinMode(CONTROL_ENABLE_PIN, INPUT_PULLUP);	// Hardware kill switch, shorted = enabled
 	getEEPROM();
 	gamepad.begin(false);	// begin joystick without autosendstate
+	// Set joystick axis ranges to full 16 bit
+	gamepad.setXAxisRange(-32767, 32767);
+	gamepad.setYAxisRange(-32767, 32767);
+	gamepad.setZAxisRange(-32767, 32767);
+
+	gamepad.setRxAxisRange(-32767, 32767);
+	gamepad.setRyAxisRange(-32767, 32767);
+	gamepad.setRzAxisRange(-32767, 32767);
+
+	gamepad.setRudderRange(-32767, 32767);
+	gamepad.setThrottleRange(-32767, 32767);
+
+	gamepad.setAcceleratorRange(-32767, 32767);
+	gamepad.setBrakeRange(-32767, 32767);
+	gamepad.setSteeringRange(-32767, 32767);
+
+	// Begin serial comms
 	Serial.begin(115200);
 }
 
@@ -168,6 +185,7 @@ void loop() {
 				}
 			}	
 		}
+
 		//Analog Processing
 		for (int8_t analogIndex = 0; analogIndex < HW_AXES; analogIndex++) {
 			if (controller.axes[analogIndex].getAnalogMode()) {	// Analog mode true, map to joystick
@@ -188,7 +206,7 @@ void loop() {
 void mapAnalogToJoystick(int8_t index) {
 	if (index == 0) {
 		gamepad.setXAxis(controller.axes[index].reportAnalog());
-	} else if (index == 0) {
+	} else if (index == 1) {
 		gamepad.setYAxis(controller.axes[index].reportAnalog());
 	}
 }
@@ -227,6 +245,8 @@ void mapAnalogToKeyboard(int8_t index) {
 	}
 }
 
+// Debug reporting
+
 void debugReport() {
 	Serial.print(F("en: "));
 	Serial.println(!digitalRead(CONTROL_ENABLE_PIN));
@@ -242,6 +262,8 @@ void debugReport() {
 	Serial.println(controller.axes[1].reportAnalog());
 	// controller.reportSerial();
 }
+
+// EEPROM components
 
 void putEEPROM() {
 	eeprom_settings myeeprom;
@@ -303,6 +325,7 @@ void getEEPROM() {
 	}
 }
 
+// Serial CLI components
 
 void cliCheckContents() {
 	char buffer[MAX_SERIAL_BYTES] = {'\0'};
