@@ -138,19 +138,20 @@ int16_t gk_analog::reportAnalog() {
 
 	if (value > center_high) {	// Axis reads high
 		if (this->invert) {
-			value = map( value, center_high, this->thresholdHigh, -1, BIT16_HALF_DOWN);
+			value = map(value, center_high, this->thresholdHigh, -1, BIT16_HALF_DOWN);
 		} else {
-			value = map( value, center_high, this->thresholdHigh, 1, BIT16_HALF_UP);
+			value = map(value, center_high, this->thresholdHigh, 1, BIT16_HALF_UP);
 		}
 	} else if (value < center_low) {	// Axis reads low
 		if (this->invert) {
-			value = map( center_low, value, this->thresholdHigh, 1, BIT16_HALF_UP);
+			value = map(value, center_low, this->thresholdLow, 1, BIT16_HALF_UP);
 		} else {
-			value = map( center_low, value, this->thresholdHigh, -1, BIT16_HALF_DOWN);
+			value = map(value, center_low, this->thresholdLow, -1, BIT16_HALF_DOWN);
 		}
 	} else {	// Axis reads inside the deadzone
 		value = 0;
 	}
+	
 	// Return the clamped, inverted, normalized value
 	return(value);
 }

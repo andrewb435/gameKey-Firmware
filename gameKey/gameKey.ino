@@ -29,8 +29,7 @@
 // gameKey interfaces
 #include "gameKeyUnit.h"
 
-// Version tracking
-#define VERSION 1
+const String VERSION = "1.00.01";
 
 // Comment to disable serial debug
 bool flagSerialDebug = false;
@@ -116,6 +115,23 @@ void setup() {
 	pinMode(CONTROL_ENABLE_PIN, INPUT_PULLUP);	// Hardware kill switch, shorted = enabled
 	getEEPROM();
 	gamepad.begin(false);	// begin joystick without autosendstate
+	// Set joystick axis ranges to full 16 bit
+	gamepad.setXAxisRange(-32767, 32767);
+	gamepad.setYAxisRange(-32767, 32767);
+	gamepad.setZAxisRange(-32767, 32767);
+
+	gamepad.setRxAxisRange(-32767, 32767);
+	gamepad.setRyAxisRange(-32767, 32767);
+	gamepad.setRzAxisRange(-32767, 32767);
+
+	gamepad.setRudderRange(-32767, 32767);
+	gamepad.setThrottleRange(-32767, 32767);
+
+	gamepad.setAcceleratorRange(-32767, 32767);
+	gamepad.setBrakeRange(-32767, 32767);
+	gamepad.setSteeringRange(-32767, 32767);
+
+	// Begin serial comms
 	Serial.begin(115200);
 }
 
@@ -136,38 +152,40 @@ void loop() {
 		controller.update();
 		//Button Processing
 		for (int i = 0; i < (HW_COLS * HW_ROWS); i++) {
-			if (controller.getGamepadMode()) {	// true = gamepad mode
-				// TODO: Future gamepad button code
-				//this is not how it should be done
-				//gamepad.setButton(i, controller.buttons[i].getCurrentState());
-			} else {	// false = keyboard mode
-				if (controller.buttons[i].getCurrentState()) {	// If the button IS PRESSED
-					if (!controller.buttons[i].getPreviousState()) {	// and it WAS NOT PRESSED
-						if (flagSerialDebug) {
-							Serial.print(F("Button state changed to pressed for button"));
-							Serial.print(i);
-							Serial.print(F(", pressing kb key \""));
-							Serial.print(controller.buttons[i].getKeymap());
-							Serial.println("\"");
-						}
-						if (!flagConfigMode) {
-							// Only actually press when not in config mode
+			if (controller.buttons[i].getCurrentState()) {	// If the button IS PRESSED
+				if (!controller.buttons[i].getPreviousState()) {	// and it WAS NOT PRESSED
+					if (flagSerialDebug) {
+						Serial.print(F("Button state changed to pressed for button"));
+						Serial.print(i);
+						Serial.print(F(", pressing kb key \""));
+						Serial.print(controller.buttons[i].getKeymap());
+						Serial.println("\"");
+					}
+					if (!flagConfigMode) {
+						// Only actually press when not in config mode
+						if (controller.buttons[i].getControlType() == KEYB || controller.buttons[i].getControlType() == BOTH) {
 							Keyboard.press(controller.buttons[i].getKeymap());	// send the keymap char
 						}
-						controller.buttons[i].stateSync();	// sync the previous state to current
-					}
-				} else if (!controller.buttons[i].getCurrentState()){	// If the button is NOT PRESSED
-					if (controller.buttons[i].getPreviousState()) {	// and it WAS PRESSED
-						if (flagSerialDebug) {
-							Serial.print(F("Button state changed to unpressed for button"));
-							Serial.println(i);
+						if (controller.buttons[i].getControlType() == GPAD || controller.buttons[i].getControlType() == BOTH) {
+							// TODO: Actually send gamepad button
+							// send the joystick function
 						}
-						Keyboard.release(controller.buttons[i].getKeymap());	// release the keymap char
-						controller.buttons[i].stateSync();	// sync the previous state to current
 					}
+					controller.buttons[i].stateSync();	// sync the previous state to current
 				}
-			}			
+			} else if (!controller.buttons[i].getCurrentState()){	// If the button is NOT PRESSED
+				if (controller.buttons[i].getPreviousState()) {	// and it WAS PRESSED
+					if (flagSerialDebug) {
+						Serial.print(F("Button state changed to unpressed for button"));
+						Serial.println(i);
+					}
+					Keyboard.release(controller.buttons[i].getKeymap());	// release the keymap char
+					// TODO: Also release joystick button
+					controller.buttons[i].stateSync();	// sync the previous state to current
+				}
+			}	
 		}
+
 		//Analog Processing
 		for (int8_t analogIndex = 0; analogIndex < HW_AXES; analogIndex++) {
 			if (controller.axes[analogIndex].getAnalogMode()) {	// Analog mode true, map to joystick
@@ -188,7 +206,7 @@ void loop() {
 void mapAnalogToJoystick(int8_t index) {
 	if (index == 0) {
 		gamepad.setXAxis(controller.axes[index].reportAnalog());
-	} else if (index == 0) {
+	} else if (index == 1) {
 		gamepad.setYAxis(controller.axes[index].reportAnalog());
 	}
 }
@@ -227,6 +245,8 @@ void mapAnalogToKeyboard(int8_t index) {
 	}
 }
 
+// Debug reporting
+
 void debugReport() {
 	Serial.print(F("en: "));
 	Serial.println(!digitalRead(CONTROL_ENABLE_PIN));
@@ -242,6 +262,70 @@ void debugReport() {
 	Serial.println(controller.axes[1].reportAnalog());
 	// controller.reportSerial();
 }
+
+// EEPROM components
+
+void putEEPROM() {
+	eeprom_settings myeeprom;
+	myeeprom.featureFlags = 0; // TODO: Implement feature flags on gameKey class
+	// for (uint8_t i = 0; i < 8; i++) {
+		myeeprom.devName[0] = "g";	// TODO: Implement device name on gameKey class
+		myeeprom.devName[1] = "k";
+		myeeprom.devName[2] = "L";
+		myeeprom.devName[3] = "e";
+		myeeprom.devName[4] = "f";
+		myeeprom.devName[5] = "t";
+		myeeprom.devName[6] = 0x00;
+		myeeprom.devName[7] = 0x00;
+	// }
+	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
+		myeeprom.buttons[i].binding = controller.buttons[i].getKeymap();
+		myeeprom.buttons[i].controlType = controller.buttons[i].getControlType();
+	}
+	for (uint8_t i = 0; i < HW_AXES; i++) {
+		myeeprom.analog[i].thresholdLow = controller.axes[i].getThresholdLow();
+		myeeprom.analog[i].center = controller.axes[i].getCenter();
+		myeeprom.analog[i].thresholdHigh = controller.axes[i].getThresholdHigh();
+		myeeprom.analog[i].deadzone = controller.axes[i].getDeadzone();
+		myeeprom.analog[i].keyDigitalUp = controller.axes[i].getKeyUp();
+		myeeprom.analog[i].keyDigitalDown = controller.axes[i].getKeyDown();
+		myeeprom.analog[i].analogMode = controller.axes[i].getAnalogMode();
+		myeeprom.analog[i].invert = controller.axes[i].getInvert();
+	}
+	EEPROM.put(EEPROM_MEMORY_START,myeeprom);
+}
+
+void getEEPROM() {
+	eeprom_settings myeeprom;
+	EEPROM.get(EEPROM_MEMORY_START,myeeprom);
+	//myeeprom.featureFlags = 0; // TODO: Implement feature flags on gameKey class
+	// for (uint8_t i = 0; i < 8; i++) {
+		// myeeprom.devName[0] = "g";	// TODO: Implement device name on gameKey class
+		// myeeprom.devName[1] = "k";
+		// myeeprom.devName[2] = "L";
+		// myeeprom.devName[3] = "e";
+		// myeeprom.devName[4] = "f";
+		// myeeprom.devName[5] = "t";
+		// myeeprom.devName[6] = 0x00;
+		// myeeprom.devName[7] = 0x00;
+	// }
+	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
+		controller.buttons[i].putKeymap(myeeprom.buttons[i].binding);
+		controller.buttons[i].putControlType(myeeprom.buttons[i].controlType);
+	}
+	for (uint8_t i = 0; i < HW_AXES; i++) {
+		controller.axes[i].setThresholdLow(myeeprom.analog[i].thresholdLow);
+		controller.axes[i].setCenter(myeeprom.analog[i].center);
+		controller.axes[i].setThresholdHigh(myeeprom.analog[i].thresholdHigh);
+		controller.axes[i].setDeadzone(myeeprom.analog[i].deadzone);
+		controller.axes[i].setKeyUp(myeeprom.analog[i].keyDigitalUp);
+		controller.axes[i].setKeyDown(myeeprom.analog[i].keyDigitalDown);
+		controller.axes[i].setAnalogMode(myeeprom.analog[i].analogMode);
+		controller.axes[i].setInvert(myeeprom.analog[i].invert);
+	}
+}
+
+// Serial CLI components
 
 void cliCheckContents() {
 	char buffer[MAX_SERIAL_BYTES] = {'\0'};
@@ -365,8 +449,10 @@ void cmdReportButtons() {
 		Serial.print(i);
 		Serial.print("=");
 		Serial.print(int(controller.buttons[i].getKeymap()));
+		Serial.print("&");
+		Serial.print(int(controller.buttons[i].getControlType()));
 		if (i < ((HW_COLS*HW_ROWS)-1)) {
-			Serial.print("&");
+			Serial.print("|");
 		}
 	}
 	Serial.println();
@@ -407,24 +493,45 @@ void cmdBind(char* arg) {
 	uint8_t bindCmdArgs[MAX_BIND_COMMANDS][BIND_CMD_SEGMENTS] = {NULL, NULL};
 	if (arg != "\0") {
 		if (flagSerialDebug) {
-			Serial.print(F("Binding buttons"));
+			Serial.print(F("Binding buttons "));
 		}
 		for (uint8_t bindIndex = 0; bindIndex < MAX_BIND_COMMANDS; bindIndex++) {
 			// Split off each individual passed bind argument, delim by & for blocks and = for cmd/arg
 			if (bindIndex == 0) {
 				bindCmdArgs[bindIndex][BIND_BUTTON] = atoi(strtok(arg, "="));
 				bindCmdArgs[bindIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_MODE] = atoi(strtok(NULL, "|"));
+				// if (flagSerialDebug && bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
+				// 	Serial.print(F("  BIND_BUTTON:"));
+				// 	Serial.print(bindCmdArgs[bindIndex][BIND_BUTTON]);
+				// 	Serial.print(F("  BIND_ARG:"));
+				// 	Serial.print(bindCmdArgs[bindIndex][BIND_ARG]);
+				// 	Serial.print(F("  BIND_MODE:"));
+				// 	Serial.println(bindCmdArgs[bindIndex][BIND_MODE]);
+				// }
 			} else {
 				bindCmdArgs[bindIndex][BIND_BUTTON] = atoi(strtok(NULL, "="));
 				bindCmdArgs[bindIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_MODE] = atoi(strtok(NULL, "|"));
+				// if (flagSerialDebug && bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
+				// 	Serial.print(F("  BIND_BUTTON:"));
+				// 	Serial.print(bindCmdArgs[bindIndex][BIND_BUTTON]);
+				// 	Serial.print(F("  BIND_ARG:"));
+				// 	Serial.print(bindCmdArgs[bindIndex][BIND_ARG]);
+				// 	Serial.print(F("  BIND_MODE:"));
+				// 	Serial.println(bindCmdArgs[bindIndex][BIND_MODE]);
+				// }
 			}
 			if (bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
 				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(bindCmdArgs[bindIndex][BIND_ARG]);
+				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putControlType((keyType)bindCmdArgs[bindIndex][BIND_MODE]);
 				if (flagSerialDebug) {
 					Serial.print(F(" b"));
 					Serial.print(int(bindCmdArgs[bindIndex][BIND_BUTTON]));
 					Serial.print(F("="));
 					Serial.print(int(bindCmdArgs[bindIndex][BIND_ARG]));
+					Serial.print(F("&"));
+					Serial.print(int(bindCmdArgs[bindIndex][BIND_MODE]));
 				}
 			}
 		}
@@ -506,65 +613,5 @@ void cmdSetAxis(char* arg) {
 		controller.axes[cur_axis].setKeyDown(axisArgs[5]);
 		controller.axes[cur_axis].setAnalogMode(axisArgs[6]);
 		controller.axes[cur_axis].setInvert(axisArgs[7]);
-	}
-}
-
-void putEEPROM() {
-	eeprom_settings myeeprom;
-	myeeprom.featureFlags = 0; // TODO: Implement feature flags on gameKey class
-	// for (uint8_t i = 0; i < 8; i++) {
-		myeeprom.devName[0] = "g";	// TODO: Implement device name on gameKey class
-		myeeprom.devName[1] = "k";
-		myeeprom.devName[2] = "L";
-		myeeprom.devName[3] = "e";
-		myeeprom.devName[4] = "f";
-		myeeprom.devName[5] = "t";
-		myeeprom.devName[6] = 0x00;
-		myeeprom.devName[7] = 0x00;
-	// }
-	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
-		myeeprom.buttons[i].binding = controller.buttons[i].getKeymap();
-		myeeprom.buttons[i].controlType = controller.buttons[i].getControlType();
-	}
-	for (uint8_t i = 0; i < HW_AXES; i++) {
-		myeeprom.analog[i].thresholdLow = controller.axes[i].getThresholdLow();
-		myeeprom.analog[i].center = controller.axes[i].getCenter();
-		myeeprom.analog[i].thresholdHigh = controller.axes[i].getThresholdHigh();
-		myeeprom.analog[i].deadzone = controller.axes[i].getDeadzone();
-		myeeprom.analog[i].keyDigitalUp = controller.axes[i].getKeyUp();
-		myeeprom.analog[i].keyDigitalDown = controller.axes[i].getKeyDown();
-		myeeprom.analog[i].analogMode = controller.axes[i].getAnalogMode();
-		myeeprom.analog[i].invert = controller.axes[i].getInvert();
-	}
-	EEPROM.put(EEPROM_MEMORY_START,myeeprom);
-}
-
-void getEEPROM() {
-	eeprom_settings myeeprom;
-	EEPROM.get(EEPROM_MEMORY_START,myeeprom);
-	//myeeprom.featureFlags = 0; // TODO: Implement feature flags on gameKey class
-	// for (uint8_t i = 0; i < 8; i++) {
-		// myeeprom.devName[0] = "g";	// TODO: Implement device name on gameKey class
-		// myeeprom.devName[1] = "k";
-		// myeeprom.devName[2] = "L";
-		// myeeprom.devName[3] = "e";
-		// myeeprom.devName[4] = "f";
-		// myeeprom.devName[5] = "t";
-		// myeeprom.devName[6] = 0x00;
-		// myeeprom.devName[7] = 0x00;
-	// }
-	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
-		controller.buttons[i].putKeymap(myeeprom.buttons[i].binding);
-		controller.buttons[i].putControlType(myeeprom.buttons[i].controlType);
-	}
-	for (uint8_t i = 0; i < HW_AXES; i++) {
-		controller.axes[i].setThresholdLow(myeeprom.analog[i].thresholdLow);
-		controller.axes[i].setCenter(myeeprom.analog[i].center);
-		controller.axes[i].setThresholdHigh(myeeprom.analog[i].thresholdHigh);
-		controller.axes[i].setDeadzone(myeeprom.analog[i].deadzone);
-		controller.axes[i].setKeyUp(myeeprom.analog[i].keyDigitalUp);
-		controller.axes[i].setKeyDown(myeeprom.analog[i].keyDigitalDown);
-		controller.axes[i].setAnalogMode(myeeprom.analog[i].analogMode);
-		controller.axes[i].setInvert(myeeprom.analog[i].invert);
 	}
 }
