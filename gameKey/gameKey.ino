@@ -468,6 +468,12 @@ void cmdReportButtons() {
 		Serial.print("=");
 		Serial.print(int(controller.buttons[i].getKeymap(LAYER_A)));
 		Serial.print("&");
+		Serial.print(int(controller.buttons[i].getKeymap(LAYER_B)));
+		Serial.print("&");
+		Serial.print(int(controller.buttons[i].getKeymap(LAYER_C)));
+		Serial.print("&");
+		Serial.print(int(controller.buttons[i].getKeymap(LAYER_D)));
+		Serial.print("&");
 		Serial.print(int(controller.buttons[i].getControlType()));
 		if (i < ((HW_COLS*HW_ROWS)-1)) {
 			Serial.print("|");
