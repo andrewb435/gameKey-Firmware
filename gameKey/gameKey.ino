@@ -32,7 +32,7 @@
 const String VERSION = "1.01.00";
 
 // Comment to disable serial debug
-bool flagSerialDebug = false;
+bool flagSerialDebug = true;
 // Verbose debug spams serial, breaking the companion app
 bool flagSerialVerbose = false;
 
@@ -591,10 +591,10 @@ void cmdUnbind(char* arg) {
 	int unbindCmdArgs[MAX_BIND_COMMANDS][BIND_CMD_SEGMENTS] = {NULL, NULL};
 	if (arg != "\0") {
 		if (flagSerialDebug) {
-				Serial.print(F("Unbinding buttons "));
+				Serial.print(F("Unbinding buttons"));
 		}
 		for (uint8_t unbindIndex = 0; unbindIndex < MAX_BIND_COMMANDS; unbindIndex++) {
-			// Split off each individual passed bind argument, delim by & for blocks and % for cmd/arg
+			// Split off each individual passed unbind argument, delim by & for blocks and % for cmd/arg
 			if (unbindIndex == 0) {
 				unbindCmdArgs[unbindIndex][BIND_BUTTON] = atoi(strtok(arg, "&"));
 			} else {
@@ -605,6 +605,7 @@ void cmdUnbind(char* arg) {
 				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(LAYER_B, 0x00);
 				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(LAYER_C, 0x00);
 				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(LAYER_D, 0x00);
+				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putControlType(KEYBOARD_BUTTON);
 				if (flagSerialDebug) {
 					Serial.print(F(" b"));
 					Serial.print(unbindCmdArgs[unbindIndex][BIND_BUTTON]);
