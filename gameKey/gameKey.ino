@@ -29,7 +29,7 @@
 // gameKey interfaces
 #include "gameKeyUnit.h"
 
-const String VERSION = "1.00.01";
+const String VERSION = "1.01.00";
 
 // Comment to disable serial debug
 bool flagSerialDebug = false;
@@ -53,41 +53,41 @@ gk_analog configThumbstick[HW_AXES] = {	// Assign pins for analog axis
 };
 
 gk_button configButtons[HW_COLS * HW_ROWS] = {	// Assign matrix positions for buttons
-	gk_button(0,0),	// Pinky Base
+	gk_button(0,0),	// Pinky (LH), Thumb Nav (RH)
 	gk_button(0,1),
 	gk_button(0,2),
 	gk_button(0,3),
 	gk_button(0,4),
 
-	gk_button(1,0),	// Ring base
+	gk_button(1,0),	// Ring (LH), Index (RH)
 	gk_button(1,1),
 	gk_button(1,2),
 	gk_button(1,3),
 	gk_button(1,4),
 
-	gk_button(2,0),	// Middle Base
+	gk_button(2,0),	// Middle (LH), Middle (RH)
 	gk_button(2,1),
 	gk_button(2,2),
 	gk_button(2,3),
 	gk_button(2,4),
 
-	gk_button(3,0),	// Index Base
+	gk_button(3,0),	// Index (LH), Ring (RH)
 	gk_button(3,1),
 	gk_button(3,2),
 	gk_button(3,3),
 	gk_button(3,4),
 
-	gk_button(4,0),	// Index Side
-	gk_button(4,1),	// Thumb Side
-	gk_button(4,2),	// ThumbJoy Press
-	gk_button(4,3),
-	gk_button(4,4),
+	gk_button(4,0),	// Thumb Nav N (LH), Pinky (RH)
+	gk_button(4,1),	// Thumb Nav E (LH)
+	gk_button(4,2),	// Thumb Nav S (LH)
+	gk_button(4,3),	// Thumb Nav W (LH)
+	gk_button(4,4),	// Thumb Nav Center (LH)
 
-	gk_button(5,0),	// Thumb D-Pad N
-	gk_button(5,1),	// E
-	gk_button(5,2),	// S
-	gk_button(5,3),	// W
-	gk_button(5,4)	// Center Press
+	gk_button(5,0),	// Index Side Finger Button
+	gk_button(5,1),	// Pinky Side Finger Button
+	gk_button(5,2),
+	gk_button(5,3),	// Thumb D-Pad Button
+	gk_button(5,4)
 };
 
 gk_unit controller(	// Controllers, assemble!
@@ -150,7 +150,18 @@ void loop() {
 	// Run the main loop
 	if (!digitalRead(CONTROL_ENABLE_PIN)) {	// Hardware kill switch is shorted
 		controller.update();
-		//Button Processing
+
+		// Layer processing
+		controller.setLayerShift(LAYER_A);	// Always start on main layer, override with below if any other layer buttons are pressed
+		for (int i = 0; i < (HW_COLS * HW_ROWS); i++) {
+			if (controller.buttons[i].getCurrentState()) {	// Button IS pressed, don't check for past state since we need to set this every time
+				if (controller.buttons[i].getControlType() == LAYERSHIFT) {	// Check for layer shift buttontype
+					controller.setLayerShift(controller.buttons[i].getKeymap(LAYER_A));	// Always stored in LAYER_A for a layer button
+				}
+			}
+		}
+
+		// Button Processing
 		for (int i = 0; i < (HW_COLS * HW_ROWS); i++) {
 			if (controller.buttons[i].getCurrentState()) {	// If the button IS PRESSED
 				if (!controller.buttons[i].getPreviousState()) {	// and it WAS NOT PRESSED
@@ -158,15 +169,15 @@ void loop() {
 						Serial.print(F("Button state changed to pressed for button"));
 						Serial.print(i);
 						Serial.print(F(", pressing kb key \""));
-						Serial.print(controller.buttons[i].getKeymap());
+						Serial.print(controller.buttons[i].getKeymap(controller.getLayerShift()));
 						Serial.println("\"");
 					}
 					if (!flagConfigMode) {
 						// Only actually press when not in config mode
-						if (controller.buttons[i].getControlType() == KEYB || controller.buttons[i].getControlType() == BOTH) {
-							Keyboard.press(controller.buttons[i].getKeymap());	// send the keymap char
+						if (controller.buttons[i].getControlType() == KEYBOARD_BUTTON || controller.buttons[i].getControlType() == BOTH) {
+							Keyboard.press(controller.buttons[i].getKeymap(controller.getLayerShift()));	// send the keymap char from the appropriate button and layer
 						}
-						if (controller.buttons[i].getControlType() == GPAD || controller.buttons[i].getControlType() == BOTH) {
+						if (controller.buttons[i].getControlType() == GAMEPAD_BUTTON || controller.buttons[i].getControlType() == BOTH) {
 							// TODO: Actually send gamepad button
 							// send the joystick function
 						}
@@ -179,7 +190,10 @@ void loop() {
 						Serial.print(F("Button state changed to unpressed for button"));
 						Serial.println(i);
 					}
-					Keyboard.release(controller.buttons[i].getKeymap());	// release the keymap char
+					Keyboard.release(controller.buttons[i].getKeymap(LAYER_A));	// release the keyA char
+					Keyboard.release(controller.buttons[i].getKeymap(LAYER_B));	// release the keyB char
+					Keyboard.release(controller.buttons[i].getKeymap(LAYER_C));	// release the keyC char
+					Keyboard.release(controller.buttons[i].getKeymap(LAYER_D));	// release the keyD char
 					// TODO: Also release joystick button
 					controller.buttons[i].stateSync();	// sync the previous state to current
 				}
@@ -279,7 +293,9 @@ void putEEPROM() {
 		myeeprom.devName[7] = 0x00;
 	// }
 	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
-		myeeprom.buttons[i].binding = controller.buttons[i].getKeymap();
+		myeeprom.buttons[i].binding_a = controller.buttons[i].getKeymap(LAYER_A);
+		myeeprom.buttons[i].binding_b = controller.buttons[i].getKeymap(LAYER_A);
+		myeeprom.buttons[i].binding_c  = controller.buttons[i].getKeymap(LAYER_A);
 		myeeprom.buttons[i].controlType = controller.buttons[i].getControlType();
 	}
 	for (uint8_t i = 0; i < HW_AXES; i++) {
@@ -310,7 +326,9 @@ void getEEPROM() {
 		// myeeprom.devName[7] = 0x00;
 	// }
 	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
-		controller.buttons[i].putKeymap(myeeprom.buttons[i].binding);
+		controller.buttons[i].putKeymap(LAYER_A, myeeprom.buttons[i].binding_a);
+		controller.buttons[i].putKeymap(LAYER_B, myeeprom.buttons[i].binding_b);
+		controller.buttons[i].putKeymap(LAYER_C, myeeprom.buttons[i].binding_c);
 		controller.buttons[i].putControlType(myeeprom.buttons[i].controlType);
 	}
 	for (uint8_t i = 0; i < HW_AXES; i++) {
@@ -448,7 +466,7 @@ void cmdReportButtons() {
 	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
 		Serial.print(i);
 		Serial.print("=");
-		Serial.print(int(controller.buttons[i].getKeymap()));
+		Serial.print(int(controller.buttons[i].getKeymap(LAYER_A)));
 		Serial.print("&");
 		Serial.print(int(controller.buttons[i].getControlType()));
 		if (i < ((HW_COLS*HW_ROWS)-1)) {
@@ -523,7 +541,7 @@ void cmdBind(char* arg) {
 				// }
 			}
 			if (bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
-				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(bindCmdArgs[bindIndex][BIND_ARG]);
+				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(LAYER_A, bindCmdArgs[bindIndex][BIND_ARG]);
 				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putControlType((keyType)bindCmdArgs[bindIndex][BIND_MODE]);
 				if (flagSerialDebug) {
 					Serial.print(F(" b"));
@@ -555,7 +573,7 @@ void cmdUnbind(char* arg) {
 				unbindCmdArgs[unbindIndex][BIND_BUTTON] = atoi(strtok(NULL, "&"));
 			}
 			if ( unbindCmdArgs[unbindIndex][BIND_BUTTON] != NULL ) {
-				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(0x00);
+				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(LAYER_A, 0x00);
 				if (flagSerialDebug) {
 					Serial.print(F(" b"));
 					Serial.print(unbindCmdArgs[unbindIndex][BIND_BUTTON]);
