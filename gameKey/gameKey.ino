@@ -374,35 +374,35 @@ void cliParse(char* buffer_in, uint8_t length_in) {
 		}
 	}
 	// Check command list
-	if (!strcmp(args[0], "devinfo")) {			// Received deviceinfo enquiry, respond with device type
+	if (!strcmp(args[0], "devi")) {			// Received deviceinfo enquiry, respond with device type
 		Serial.println(F("gameKey"));
-	} else if (!strcmp(args[0], "config")) {	// switch config mode
+	} else if (!strcmp(args[0], "conf")) {	// switch config mode
 		cmdConfigMode(args[1]);
-	} else if (!strcmp(args[0], "debug")) {		// switch debug mode
+	} else if (!strcmp(args[0], "de")) {	// switch debug mode
 		cmdDebugMode(args[1]);
-	} else if (!strcmp(args[0], "superdebug")) {// switch debug mode
+	} else if (!strcmp(args[0], "sde")) {	// switch debug mode
 		cmdSuperDebugMode(args[1]);
-	} else if (!strcmp(args[0], "vers")) {		// Report FW Ver
+	} else if (!strcmp(args[0], "vers")) {	// Report FW Ver
 		Serial.println(VERSION);
-	} else if (!strcmp(args[0], "savenv")) {	// Save config to eeprom
+	} else if (!strcmp(args[0], "savnv")) {	// Save config to eeprom
 		cmdSaveEEPROM();
-	} else if (!strcmp(args[0], "feat")) {		// Return feature flags
+	} else if (!strcmp(args[0], "feat")) {	// Return feature flags
 		cmdReportFeatures();
-	} else if (!strcmp(args[0], "getname")) {	// Receive and parse devname
+	} else if (!strcmp(args[0], "gtna")) {	// Receive and parse devname
 		cmdReportName();
-	} else if (!strcmp(args[0], "getbuttons")) {	// Report Button configuration
+	} else if (!strcmp(args[0], "gtbu")) {	// Report Button configuration
 		cmdReportButtons();
-	} else if (!strcmp(args[0], "getaxes")) {	// Report Axes configuration
+	} else if (!strcmp(args[0], "gtax")) {	// Report Axes configuration
 		cmdReportAxes();
-	} else if (!strcmp(args[0], "setname")) {	// Receive and parse devname
+	} else if (!strcmp(args[0], "stna")) {	// Receive and parse devname
 		cmdRename(args[1]);
-	} else if (!strcmp(args[0], "bind")) {		// Receive and parse bind commands
+	} else if (!strcmp(args[0], "bind")) {	// Receive and parse bind commands
 		cmdBind(args[1]);
 	} else if (!strcmp(args[0], "unbind")) {	// Receive and parse unbind commands
 		cmdUnbind(args[1]);
-	} else if (!strcmp(args[0], "reporta")) {	// report current analog values
+	} else if (!strcmp(args[0], "repa")) {	// report current analog values
 		cmdReportAnalog();
-	} else if (!strcmp(args[0], "setaxis")) {	// report current analog values
+	} else if (!strcmp(args[0], "stax")) {	// report current analog values
 		cmdSetAxis(args[1]);
 	}
 }
