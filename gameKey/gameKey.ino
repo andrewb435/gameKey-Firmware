@@ -519,7 +519,7 @@ void cmdBind(char* arg) {
 	uint8_t bindCmdArgs[MAX_BIND_COMMANDS][BIND_CMD_SEGMENTS] = {NULL, NULL};
 	if (arg != "\0") {	// Null terminated serial string
 		if (flagSerialDebug) {
-			Serial.print(F("Binding buttons "));
+			Serial.println(F("Binding buttons "));
 		}
 		for (uint8_t bindIndex = 0; bindIndex < MAX_BIND_COMMANDS; bindIndex++) {
 			// Split off each individual passed bind argument, delim by & for blocks and = for cmd/arg
@@ -587,8 +587,8 @@ void cmdBind(char* arg) {
 
 void cmdUnbind(char* arg) {
 	// Example Unbind String:
-	// unbind 7&8&13&14&24&27&29
-	int unbindCmdArgs[MAX_BIND_COMMANDS][BIND_CMD_SEGMENTS] = {NULL, NULL};
+	// unbind 7=1&8=1&13=1&14=1&24=1&27=1&29=1
+	int unbindCmdArgs[MAX_BIND_COMMANDS][UNBIND_CMD_SEGMENTS] = {NULL, NULL};
 	if (arg != "\0") {
 		if (flagSerialDebug) {
 				Serial.print(F("Unbinding buttons"));
@@ -596,19 +596,22 @@ void cmdUnbind(char* arg) {
 		for (uint8_t unbindIndex = 0; unbindIndex < MAX_BIND_COMMANDS; unbindIndex++) {
 			// Split off each individual passed unbind argument, delim by & for blocks and % for cmd/arg
 			if (unbindIndex == 0) {
-				unbindCmdArgs[unbindIndex][BIND_BUTTON] = atoi(strtok(arg, "&"));
+				unbindCmdArgs[unbindIndex][UNBIND_BUTTON] = atoi(strtok(arg, "="));
+				unbindCmdArgs[unbindIndex][UNBIND_ARG] = atoi(strtok(NULL, "&"));
 			} else {
-				unbindCmdArgs[unbindIndex][BIND_BUTTON] = atoi(strtok(NULL, "&"));
+				unbindCmdArgs[unbindIndex][UNBIND_BUTTON] = atoi(strtok(NULL, "="));
+				unbindCmdArgs[unbindIndex][UNBIND_ARG] = atoi(strtok(NULL, "&"));
 			}
-			if ( unbindCmdArgs[unbindIndex][BIND_BUTTON] != NULL ) {
-				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(LAYER_A, 0x00);
-				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(LAYER_B, 0x00);
-				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(LAYER_C, 0x00);
-				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(LAYER_D, 0x00);
-				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putControlType(KEYBOARD_BUTTON);
+			// Make sure the input value at the loop index actually exists before unbinding it
+			if ( unbindCmdArgs[unbindIndex][UNBIND_ARG] == true ) {
+				controller.buttons[unbindCmdArgs[unbindIndex][UNBIND_BUTTON]].putKeymap(LAYER_A, 0x00);
+				controller.buttons[unbindCmdArgs[unbindIndex][UNBIND_BUTTON]].putKeymap(LAYER_B, 0x00);
+				controller.buttons[unbindCmdArgs[unbindIndex][UNBIND_BUTTON]].putKeymap(LAYER_C, 0x00);
+				controller.buttons[unbindCmdArgs[unbindIndex][UNBIND_BUTTON]].putKeymap(LAYER_D, 0x00);
+				controller.buttons[unbindCmdArgs[unbindIndex][UNBIND_BUTTON]].putControlType(KEYBOARD_BUTTON);
 				if (flagSerialDebug) {
 					Serial.print(F(" b"));
-					Serial.print(unbindCmdArgs[unbindIndex][BIND_BUTTON]);
+					Serial.print(unbindCmdArgs[unbindIndex][UNBIND_BUTTON]);
 				}
 			}
 		}
