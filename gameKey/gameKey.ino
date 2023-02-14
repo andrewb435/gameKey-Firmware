@@ -512,8 +512,13 @@ void cmdRename(char* arg) {
 }
 
 void cmdBind(char* arg) {
-	// Example Bind String:
-	// bind 0=128&127&126&125&0|1=129&130&140&150&0|2=130&0
+	// Example Bind String
+	// bind keynumber = keycode_layera & keycode_layerb & keycode_layerc & keycode_layerd & keyType
+	// bind 0=128&127&126&125&1|1=129&130&140&150&2
+	// Max characters 250 - bind + 10 full keycommands is 225-235 depending on button number
+	// Companion app breaks bind commands in 3 sets of 10 keybinds
+	// Unbinding is accomplished by binding keytype 1 with 0 for all keycodes
+	// e.g. bind 1=0&0&0&0&1
 	uint8_t bindCmdArgs[MAX_BIND_COMMANDS][BIND_CMD_SEGMENTS] = {NULL, NULL};
 	if (arg != "\0") {	// Null terminated serial string
 		if (flagSerialDebug) {
