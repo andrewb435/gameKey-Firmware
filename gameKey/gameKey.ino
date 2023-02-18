@@ -175,7 +175,7 @@ void loop() {
 					if (!flagConfigMode) {
 						// Only actually press when not in config mode
 						if (controller.buttons[i].getControlType() == KEYBOARD_BUTTON || controller.buttons[i].getControlType() == BOTH) {
-							pressKeyLayer(i);
+							Keyboard.press(controller.buttons[i].getKeymap(controller.getLayerShift()));
 						}
 						if (controller.buttons[i].getControlType() == GAMEPAD_BUTTON || controller.buttons[i].getControlType() == BOTH) {
 							// TODO: Actually send gamepad button
@@ -214,19 +214,6 @@ void loop() {
 		}
 	} else {	// Hardware kill switch is open
 		Keyboard.releaseAll();	// Release all keyboard keys to prevent lockouts
-	}
-}
-
-void pressKeyLayer(int index) {
-	// Sort through all the layer enums
-	for (uint8_t layerIndex = LAYER_D; layerIndex <= LAYER_A; layerIndex++){
-		if (controller.getLayerShift() == layerIndex) {
-			// If the layerIndex matches the actual active layer, press the appropriate keybind
-			Keyboard.press(controller.buttons[index].getKeymap((keyLayer)layerIndex));
-		} else {
-			// Otherwise unpress all other binds
-			Keyboard.release(controller.buttons[index].getKeymap((keyLayer)layerIndex));
-		}
 	}
 }
 
