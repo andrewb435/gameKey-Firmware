@@ -8,6 +8,7 @@ gk_analog::gk_analog() {
 	analogMode = false;
 	deadzone = 0;
 	invert = false;
+	calibrate = false;
 	keyDigitalUp = 0x00;
 	keyDigitalDown = 0x00;
 }
@@ -20,6 +21,7 @@ gk_analog::gk_analog(int8_t analogPin_in) {
 	analogMode = false;
 	deadzone = 0;
 	invert = false;
+	calibrate = false;
 	keyDigitalUp = 0x00;
 	keyDigitalDown = 0x00;
 
@@ -57,6 +59,16 @@ void gk_analog::setAnalogMode(bool analogMode_in) {
 
 void gk_analog::setInvert(bool invert_in) {
 	this->invert = invert_in;
+}
+
+void gk_analog::setCalibrate(bool calibrate_in) {
+	this->calibrate = calibrate_in;
+	if (calibrate_in) {
+		uint16_t current = analogRead(this->analogPin);
+		this->thresholdHigh = current;
+		this->center = current;
+		this->thresholdLow = current;
+	}
 }
 
 // Gets
@@ -106,6 +118,14 @@ uint8_t gk_analog::getKeyDown() {
 void gk_analog::update() {
 	// Always read the pin every update
 	readAverage[readIndex] = analogRead(this->analogPin);
+	if (this->calibrate) {
+		if (readAverage[readIndex] > this->thresholdHigh) {
+			this->thresholdHigh = readAverage[readIndex];
+		}
+		if (readAverage[readIndex] < this->thresholdLow) {
+			this->thresholdLow = readAverage[readIndex];
+		}
+	}
 	if (readIndex >= READ_AVERAGE_COUNT) {
 		readIndex = 0;
 	} else {

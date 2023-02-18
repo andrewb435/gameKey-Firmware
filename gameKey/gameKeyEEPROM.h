@@ -10,6 +10,7 @@ typedef struct eeprom_button {
 	uint8_t binding_a;
 	uint8_t binding_b;
 	uint8_t binding_c;
+	uint8_t binding_d;
 	keyType controlType;
 };
 

@@ -32,7 +32,7 @@
 const String VERSION = "1.01.00";
 
 // Comment to disable serial debug
-bool flagSerialDebug = true;
+bool flagSerialDebug = false;
 // Verbose debug spams serial, breaking the companion app
 bool flagSerialVerbose = false;
 
@@ -154,8 +154,8 @@ void loop() {
 		// Layer processing
 		controller.setLayerShift(LAYER_A);	// Always start on main layer, override with below if any other layer buttons are pressed
 		for (int i = 0; i < (HW_COLS * HW_ROWS); i++) {
-			if (controller.buttons[i].getCurrentState()) {	// Button IS pressed, don't check for past state since we need to set this every time
-				if (controller.buttons[i].getControlType() == LAYERSHIFT) {	// Check for layer shift buttontype
+			if (controller.buttons[i].getControlType() == LAYERSHIFT) {	// Check for layer shift buttontype
+				if (controller.buttons[i].getCurrentState()) {	// Button IS pressed, don't check for past state since we need to set this every time
 					controller.setLayerShift(controller.buttons[i].getKeymap(LAYER_A));	// Always stored in LAYER_A for a layer button
 				}
 			}
@@ -175,7 +175,7 @@ void loop() {
 					if (!flagConfigMode) {
 						// Only actually press when not in config mode
 						if (controller.buttons[i].getControlType() == KEYBOARD_BUTTON || controller.buttons[i].getControlType() == BOTH) {
-							Keyboard.press(controller.buttons[i].getKeymap(controller.getLayerShift()));	// send the keymap char from the appropriate button and layer
+							pressKeyLayer(i);
 						}
 						if (controller.buttons[i].getControlType() == GAMEPAD_BUTTON || controller.buttons[i].getControlType() == BOTH) {
 							// TODO: Actually send gamepad button
@@ -214,6 +214,19 @@ void loop() {
 		}
 	} else {	// Hardware kill switch is open
 		Keyboard.releaseAll();	// Release all keyboard keys to prevent lockouts
+	}
+}
+
+void pressKeyLayer(int index) {
+	// Sort through all the layer enums
+	for (uint8_t layerIndex = LAYER_D; layerIndex <= LAYER_A; layerIndex++){
+		if (controller.getLayerShift() == layerIndex) {
+			// If the layerIndex matches the actual active layer, press the appropriate keybind
+			Keyboard.press(controller.buttons[index].getKeymap((keyLayer)layerIndex));
+		} else {
+			// Otherwise unpress all other binds
+			Keyboard.release(controller.buttons[index].getKeymap((keyLayer)layerIndex));
+		}
 	}
 }
 
@@ -296,6 +309,7 @@ void putEEPROM() {
 		myeeprom.buttons[i].binding_a = controller.buttons[i].getKeymap(LAYER_A);
 		myeeprom.buttons[i].binding_b = controller.buttons[i].getKeymap(LAYER_B);
 		myeeprom.buttons[i].binding_c  = controller.buttons[i].getKeymap(LAYER_C);
+		myeeprom.buttons[i].binding_d  = controller.buttons[i].getKeymap(LAYER_D);
 		myeeprom.buttons[i].controlType = controller.buttons[i].getControlType();
 	}
 	for (uint8_t i = 0; i < HW_AXES; i++) {
@@ -329,6 +343,7 @@ void getEEPROM() {
 		controller.buttons[i].putKeymap(LAYER_A, myeeprom.buttons[i].binding_a);
 		controller.buttons[i].putKeymap(LAYER_B, myeeprom.buttons[i].binding_b);
 		controller.buttons[i].putKeymap(LAYER_C, myeeprom.buttons[i].binding_c);
+		controller.buttons[i].putKeymap(LAYER_D, myeeprom.buttons[i].binding_d);
 		controller.buttons[i].putControlType(myeeprom.buttons[i].controlType);
 	}
 	for (uint8_t i = 0; i < HW_AXES; i++) {
@@ -402,6 +417,10 @@ void cliParse(char* buffer_in, uint8_t length_in) {
 		cmdRename(args[1]);
 	} else if (!strcmp(args[0], "stax")) {	// Set axis configuration
 		cmdSetAxis(args[1]);
+	} else if (!strcmp(args[0], "stca")) {	// Set axis configuration
+		cmdStartCalibration();
+	} else if (!strcmp(args[0], "gtca")) {	// Set axis configuration
+		cmdFetchCalibration();
 	}
 }
 
@@ -410,10 +429,10 @@ void cmdConfigMode(char* arg) {
 		int8_t iarg = atoi(arg);
 		if (iarg) {
 			flagConfigMode = true;
-			Serial.println("Enabling config mode, keypresses disabled");
+			Serial.println(F("Enabling config mode, keypresses disabled"));
 		} else if (!iarg) {
 			flagConfigMode = false;
-			Serial.println("DISABLING CONFIG MODE, KEYPRESSES ENABLED");
+			Serial.println(F("DISABLING CONFIG MODE, KEYPRESSES ENABLED"));
 		}
 	}
 }
@@ -423,10 +442,10 @@ void cmdDebugMode(char* arg) {
 		int8_t iarg = atoi(arg);
 		if (iarg) {
 			flagSerialDebug = true;
-			Serial.println("Enabling debug mode, many more serial responses");
+			Serial.println(F("Enabling debug mode, many more serial responses"));
 		} else if (!iarg) {
 			flagSerialDebug = false;
-			Serial.println("Disabling debug mode, serial feedback minimized");
+			Serial.println(F("Disabling debug mode, serial feedback minimized"));
 		}
 	}
 }
@@ -436,18 +455,18 @@ void cmdSuperDebugMode(char* arg) {
 		int8_t iarg = atoi(arg);
 		if (iarg) {
 			flagSerialVerbose = true;
-			Serial.println("Enabling SUPER debug mode, COMPANION WILL BREAK");
+			Serial.println(F("Enabling SUPER debug mode, COMPANION WILL BREAK"));
 		} else if (!iarg) {
 			flagSerialVerbose = false;
-			Serial.println("Disabling SUPER debug mode, companion can be used");
+			Serial.println(F("Disabling SUPER debug mode, companion can be used"));
 		}
 	}
 }
 
 void cmdSaveEEPROM() {
-	Serial.println("Saving config to EEPROM...");
+	Serial.println(F("Saving config to EEPROM..."));
 	putEEPROM();
-	Serial.println("Saved!");
+	Serial.println(F("Saved!"));
 }
 
 void cmdReportFeatures() {
@@ -585,6 +604,10 @@ void cmdReportAnalog() {
 }
 
 void cmdSetAxis(char* arg) {
+	// Example sring:
+	// stax 0=0&511&1023&200&65&94&0&1
+	// axis# = low & mid & high & deadzone & keyup & keydown & analogmode & invert
+	// Sent one at a time
 	uint16_t axisArgs[AXIS_CMD_SEGMENTS] = {NULL};
 	if (arg != "\0") {
 		if (flagSerialDebug) {
@@ -619,4 +642,32 @@ void cmdSetAxis(char* arg) {
 		controller.axes[cur_axis].setAnalogMode(axisArgs[6]);
 		controller.axes[cur_axis].setInvert(axisArgs[7]);
 	}
+}
+
+void cmdStartCalibration() {
+	// stca
+	for (uint8_t i = 0; i < HW_AXES; i++) {
+		controller.axes[i].setCalibrate(true);
+	}
+}
+
+void cmdFetchCalibration() {
+	// gtca
+	// axis = low & center & high | axis = low & center & high
+	// 0=270&540&807|1=237&532&783
+	// 0=269&536&807|1=239&534&783
+	for (uint8_t i = 0; i < HW_AXES; i++) {
+		controller.axes[i].setCalibrate(false);
+		Serial.print(i);
+		Serial.print(F("="));
+		Serial.print(controller.axes[i].getThresholdLow());
+		Serial.print(F("&"));
+		Serial.print(controller.axes[i].getCenter());
+		Serial.print(F("&"));
+		Serial.print(controller.axes[i].getThresholdHigh());
+		if (i < HW_AXES - 1) {
+			Serial.print("|");
+		}
+	}
+	Serial.println();
 }
