@@ -51,6 +51,17 @@ void gk_unit::update() {
 	}
 }
 
+<<<<<<< HEAD
+=======
+void gk_unit::setLayerShift(uint8_t layer_in){
+	this->activeLayer = (keyLayer)layer_in;	// cast the decimal keybind into 
+}
+
+keyLayer gk_unit::getLayerShift(){
+	return(this->activeLayer);	// cast the decimal keybind into 
+}
+
+>>>>>>> layersupport
 bool gk_unit::setGamepadMode(bool mode_in) {
 	this->controllerMode = mode_in;
 }

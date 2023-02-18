@@ -7,7 +7,14 @@
 #define EEPROM_MEMORY_START 0
 
 typedef struct eeprom_button {
+<<<<<<< HEAD
 	uint8_t binding;
+=======
+	uint8_t binding_a;
+	uint8_t binding_b;
+	uint8_t binding_c;
+	uint8_t binding_d;
+>>>>>>> layersupport
 	keyType controlType;
 };
 

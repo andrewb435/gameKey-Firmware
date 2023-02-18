@@ -29,7 +29,7 @@
 // gameKey interfaces
 #include "gameKeyUnit.h"
 
-const String VERSION = "1.00.01";
+const String VERSION = "2.0.0";
 
 // Comment to disable serial debug
 bool flagSerialDebug = false;
@@ -53,41 +53,41 @@ gk_analog configThumbstick[HW_AXES] = {	// Assign pins for analog axis
 };
 
 gk_button configButtons[HW_COLS * HW_ROWS] = {	// Assign matrix positions for buttons
-	gk_button(0,0),	// Pinky Base
+	gk_button(0,0),	// Pinky (LH), Thumb Nav (RH)
 	gk_button(0,1),
 	gk_button(0,2),
 	gk_button(0,3),
 	gk_button(0,4),
 
-	gk_button(1,0),	// Ring base
+	gk_button(1,0),	// Ring (LH), Index (RH)
 	gk_button(1,1),
 	gk_button(1,2),
 	gk_button(1,3),
 	gk_button(1,4),
 
-	gk_button(2,0),	// Middle Base
+	gk_button(2,0),	// Middle (LH), Middle (RH)
 	gk_button(2,1),
 	gk_button(2,2),
 	gk_button(2,3),
 	gk_button(2,4),
 
-	gk_button(3,0),	// Index Base
+	gk_button(3,0),	// Index (LH), Ring (RH)
 	gk_button(3,1),
 	gk_button(3,2),
 	gk_button(3,3),
 	gk_button(3,4),
 
-	gk_button(4,0),	// Index Side
-	gk_button(4,1),	// Thumb Side
-	gk_button(4,2),	// ThumbJoy Press
-	gk_button(4,3),
-	gk_button(4,4),
+	gk_button(4,0),	// Thumb Nav N (LH), Pinky (RH)
+	gk_button(4,1),	// Thumb Nav E (LH)
+	gk_button(4,2),	// Thumb Nav S (LH)
+	gk_button(4,3),	// Thumb Nav W (LH)
+	gk_button(4,4),	// Thumb Nav Center (LH)
 
-	gk_button(5,0),	// Thumb D-Pad N
-	gk_button(5,1),	// E
-	gk_button(5,2),	// S
-	gk_button(5,3),	// W
-	gk_button(5,4)	// Center Press
+	gk_button(5,0),	// Index Side Finger Button
+	gk_button(5,1),	// Pinky Side Finger Button
+	gk_button(5,2),
+	gk_button(5,3),	// Thumb D-Pad Button
+	gk_button(5,4)
 };
 
 gk_unit controller(	// Controllers, assemble!
@@ -150,7 +150,18 @@ void loop() {
 	// Run the main loop
 	if (!digitalRead(CONTROL_ENABLE_PIN)) {	// Hardware kill switch is shorted
 		controller.update();
-		//Button Processing
+
+		// Layer processing
+		controller.setLayerShift(LAYER_A);	// Always start on main layer, override with below if any other layer buttons are pressed
+		for (int i = 0; i < (HW_COLS * HW_ROWS); i++) {
+			if (controller.buttons[i].getControlType() == LAYERSHIFT) {	// Check for layer shift buttontype
+				if (controller.buttons[i].getCurrentState()) {	// Button IS pressed, don't check for past state since we need to set this every time
+					controller.setLayerShift(controller.buttons[i].getKeymap(LAYER_A));	// Always stored in LAYER_A for a layer button
+				}
+			}
+		}
+
+		// Button Processing
 		for (int i = 0; i < (HW_COLS * HW_ROWS); i++) {
 			if (controller.buttons[i].getCurrentState()) {	// If the button IS PRESSED
 				if (!controller.buttons[i].getPreviousState()) {	// and it WAS NOT PRESSED
@@ -158,15 +169,15 @@ void loop() {
 						Serial.print(F("Button state changed to pressed for button"));
 						Serial.print(i);
 						Serial.print(F(", pressing kb key \""));
-						Serial.print(controller.buttons[i].getKeymap());
+						Serial.print(controller.buttons[i].getKeymap(controller.getLayerShift()));
 						Serial.println("\"");
 					}
 					if (!flagConfigMode) {
 						// Only actually press when not in config mode
-						if (controller.buttons[i].getControlType() == KEYB || controller.buttons[i].getControlType() == BOTH) {
-							Keyboard.press(controller.buttons[i].getKeymap());	// send the keymap char
+						if (controller.buttons[i].getControlType() == KEYBOARD_BUTTON || controller.buttons[i].getControlType() == BOTH) {
+							Keyboard.press(controller.buttons[i].getKeymap(controller.getLayerShift()));
 						}
-						if (controller.buttons[i].getControlType() == GPAD || controller.buttons[i].getControlType() == BOTH) {
+						if (controller.buttons[i].getControlType() == GAMEPAD_BUTTON || controller.buttons[i].getControlType() == BOTH) {
 							// TODO: Actually send gamepad button
 							// send the joystick function
 						}
@@ -179,7 +190,10 @@ void loop() {
 						Serial.print(F("Button state changed to unpressed for button"));
 						Serial.println(i);
 					}
-					Keyboard.release(controller.buttons[i].getKeymap());	// release the keymap char
+					Keyboard.release(controller.buttons[i].getKeymap(LAYER_A));	// release the keyA char
+					Keyboard.release(controller.buttons[i].getKeymap(LAYER_B));	// release the keyB char
+					Keyboard.release(controller.buttons[i].getKeymap(LAYER_C));	// release the keyC char
+					Keyboard.release(controller.buttons[i].getKeymap(LAYER_D));	// release the keyD char
 					// TODO: Also release joystick button
 					controller.buttons[i].stateSync();	// sync the previous state to current
 				}
@@ -279,7 +293,10 @@ void putEEPROM() {
 		myeeprom.devName[7] = 0x00;
 	// }
 	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
-		myeeprom.buttons[i].binding = controller.buttons[i].getKeymap();
+		myeeprom.buttons[i].binding_a = controller.buttons[i].getKeymap(LAYER_A);
+		myeeprom.buttons[i].binding_b = controller.buttons[i].getKeymap(LAYER_B);
+		myeeprom.buttons[i].binding_c  = controller.buttons[i].getKeymap(LAYER_C);
+		myeeprom.buttons[i].binding_d  = controller.buttons[i].getKeymap(LAYER_D);
 		myeeprom.buttons[i].controlType = controller.buttons[i].getControlType();
 	}
 	for (uint8_t i = 0; i < HW_AXES; i++) {
@@ -310,7 +327,10 @@ void getEEPROM() {
 		// myeeprom.devName[7] = 0x00;
 	// }
 	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
-		controller.buttons[i].putKeymap(myeeprom.buttons[i].binding);
+		controller.buttons[i].putKeymap(LAYER_A, myeeprom.buttons[i].binding_a);
+		controller.buttons[i].putKeymap(LAYER_B, myeeprom.buttons[i].binding_b);
+		controller.buttons[i].putKeymap(LAYER_C, myeeprom.buttons[i].binding_c);
+		controller.buttons[i].putKeymap(LAYER_D, myeeprom.buttons[i].binding_d);
 		controller.buttons[i].putControlType(myeeprom.buttons[i].controlType);
 	}
 	for (uint8_t i = 0; i < HW_AXES; i++) {
@@ -356,36 +376,38 @@ void cliParse(char* buffer_in, uint8_t length_in) {
 		}
 	}
 	// Check command list
-	if (!strcmp(args[0], "devinfo")) {			// Received deviceinfo enquiry, respond with device type
-		Serial.println(F("gameKey"));
-	} else if (!strcmp(args[0], "config")) {	// switch config mode
-		cmdConfigMode(args[1]);
-	} else if (!strcmp(args[0], "debug")) {		// switch debug mode
-		cmdDebugMode(args[1]);
-	} else if (!strcmp(args[0], "superdebug")) {// switch debug mode
-		cmdSuperDebugMode(args[1]);
-	} else if (!strcmp(args[0], "vers")) {		// Report FW Ver
-		Serial.println(VERSION);
-	} else if (!strcmp(args[0], "savenv")) {	// Save config to eeprom
-		cmdSaveEEPROM();
-	} else if (!strcmp(args[0], "feat")) {		// Return feature flags
-		cmdReportFeatures();
-	} else if (!strcmp(args[0], "getname")) {	// Receive and parse devname
-		cmdReportName();
-	} else if (!strcmp(args[0], "getbuttons")) {	// Report Button configuration
-		cmdReportButtons();
-	} else if (!strcmp(args[0], "getaxes")) {	// Report Axes configuration
-		cmdReportAxes();
-	} else if (!strcmp(args[0], "setname")) {	// Receive and parse devname
-		cmdRename(args[1]);
-	} else if (!strcmp(args[0], "bind")) {		// Receive and parse bind commands
-		cmdBind(args[1]);
-	} else if (!strcmp(args[0], "unbind")) {	// Receive and parse unbind commands
-		cmdUnbind(args[1]);
-	} else if (!strcmp(args[0], "reporta")) {	// report current analog values
+	if (!strcmp(args[0], "repa")) {			// report current analog values
 		cmdReportAnalog();
-	} else if (!strcmp(args[0], "setaxis")) {	// report current analog values
+	} else if (!strcmp(args[0], "devi")) {	// Received deviceinfo enquiry, respond with device type
+		Serial.println(F("gameKey"));
+	} else if (!strcmp(args[0], "bind")) {	// Receive and parse bind commands
+		cmdBind(args[1]);
+	} else if (!strcmp(args[0], "conf")) {	// switch config mode
+		cmdConfigMode(args[1]);
+	} else if (!strcmp(args[0], "de")) {	// switch debug mode
+		cmdDebugMode(args[1]);
+	} else if (!strcmp(args[0], "sde")) {	// switch debug mode
+		cmdSuperDebugMode(args[1]);
+	} else if (!strcmp(args[0], "vers")) {	// Report FW Ver
+		Serial.println(VERSION);
+	} else if (!strcmp(args[0], "savnv")) {	// Save config to eeprom
+		cmdSaveEEPROM();
+	} else if (!strcmp(args[0], "feat")) {	// Return feature flags
+		cmdReportFeatures();
+	} else if (!strcmp(args[0], "gtna")) {	// Receive and parse devname
+		cmdReportName();
+	} else if (!strcmp(args[0], "gtbu")) {	// Report Button configuration
+		cmdReportButtons();
+	} else if (!strcmp(args[0], "gtax")) {	// Report Axes configuration
+		cmdReportAxes();
+	} else if (!strcmp(args[0], "stna")) {	// Receive and parse devname
+		cmdRename(args[1]);
+	} else if (!strcmp(args[0], "stax")) {	// Set axis configuration
 		cmdSetAxis(args[1]);
+	} else if (!strcmp(args[0], "stca")) {	// Set axis configuration
+		cmdStartCalibration();
+	} else if (!strcmp(args[0], "gtca")) {	// Set axis configuration
+		cmdFetchCalibration();
 	}
 }
 
@@ -394,10 +416,10 @@ void cmdConfigMode(char* arg) {
 		int8_t iarg = atoi(arg);
 		if (iarg) {
 			flagConfigMode = true;
-			Serial.println("Enabling config mode, keypresses disabled");
+			Serial.println(F("Enabling config mode, keypresses disabled"));
 		} else if (!iarg) {
 			flagConfigMode = false;
-			Serial.println("DISABLING CONFIG MODE, KEYPRESSES ENABLED");
+			Serial.println(F("DISABLING CONFIG MODE, KEYPRESSES ENABLED"));
 		}
 	}
 }
@@ -407,10 +429,10 @@ void cmdDebugMode(char* arg) {
 		int8_t iarg = atoi(arg);
 		if (iarg) {
 			flagSerialDebug = true;
-			Serial.println("Enabling debug mode, many more serial responses");
+			Serial.println(F("Enabling debug mode, many more serial responses"));
 		} else if (!iarg) {
 			flagSerialDebug = false;
-			Serial.println("Disabling debug mode, serial feedback minimized");
+			Serial.println(F("Disabling debug mode, serial feedback minimized"));
 		}
 	}
 }
@@ -420,18 +442,18 @@ void cmdSuperDebugMode(char* arg) {
 		int8_t iarg = atoi(arg);
 		if (iarg) {
 			flagSerialVerbose = true;
-			Serial.println("Enabling SUPER debug mode, COMPANION WILL BREAK");
+			Serial.println(F("Enabling SUPER debug mode, COMPANION WILL BREAK"));
 		} else if (!iarg) {
 			flagSerialVerbose = false;
-			Serial.println("Disabling SUPER debug mode, companion can be used");
+			Serial.println(F("Disabling SUPER debug mode, companion can be used"));
 		}
 	}
 }
 
 void cmdSaveEEPROM() {
-	Serial.println("Saving config to EEPROM...");
+	Serial.println(F("Saving config to EEPROM..."));
 	putEEPROM();
-	Serial.println("Saved!");
+	Serial.println(F("Saved!"));
 }
 
 void cmdReportFeatures() {
@@ -448,7 +470,13 @@ void cmdReportButtons() {
 	for (uint8_t i = 0; i < HW_COLS*HW_ROWS; i++) {
 		Serial.print(i);
 		Serial.print("=");
-		Serial.print(int(controller.buttons[i].getKeymap()));
+		Serial.print(int(controller.buttons[i].getKeymap(LAYER_A)));
+		Serial.print("&");
+		Serial.print(int(controller.buttons[i].getKeymap(LAYER_B)));
+		Serial.print("&");
+		Serial.print(int(controller.buttons[i].getKeymap(LAYER_C)));
+		Serial.print("&");
+		Serial.print(int(controller.buttons[i].getKeymap(LAYER_D)));
 		Serial.print("&");
 		Serial.print(int(controller.buttons[i].getControlType()));
 		if (i < ((HW_COLS*HW_ROWS)-1)) {
@@ -490,75 +518,58 @@ void cmdRename(char* arg) {
 }
 
 void cmdBind(char* arg) {
+	// Example Bind String
+	// bind keynumber = keycode_layera & keycode_layerb & keycode_layerc & keycode_layerd & keyType
+	// bind 0=128&127&126&125&1|1=129&130&140&150&2
+	// Max characters 250 - bind + 10 full keycommands is 225-235 depending on button number
+	// Companion app breaks bind commands in 3 sets of 10 keybinds
+	// Unbinding is accomplished by binding keytype 1 with 0 for all keycodes
+	// e.g. bind 1=0&0&0&0&1
 	uint8_t bindCmdArgs[MAX_BIND_COMMANDS][BIND_CMD_SEGMENTS] = {NULL, NULL};
-	if (arg != "\0") {
+	if (arg != "\0") {	// Null terminated serial string
 		if (flagSerialDebug) {
-			Serial.print(F("Binding buttons "));
+			Serial.println(F("Binding buttons "));
 		}
 		for (uint8_t bindIndex = 0; bindIndex < MAX_BIND_COMMANDS; bindIndex++) {
 			// Split off each individual passed bind argument, delim by & for blocks and = for cmd/arg
 			if (bindIndex == 0) {
 				bindCmdArgs[bindIndex][BIND_BUTTON] = atoi(strtok(arg, "="));
-				bindCmdArgs[bindIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_ARG_A] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_ARG_B] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_ARG_C] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_ARG_D] = atoi(strtok(NULL, "&"));
 				bindCmdArgs[bindIndex][BIND_MODE] = atoi(strtok(NULL, "|"));
-				// if (flagSerialDebug && bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
-				// 	Serial.print(F("  BIND_BUTTON:"));
-				// 	Serial.print(bindCmdArgs[bindIndex][BIND_BUTTON]);
-				// 	Serial.print(F("  BIND_ARG:"));
-				// 	Serial.print(bindCmdArgs[bindIndex][BIND_ARG]);
-				// 	Serial.print(F("  BIND_MODE:"));
-				// 	Serial.println(bindCmdArgs[bindIndex][BIND_MODE]);
-				// }
 			} else {
 				bindCmdArgs[bindIndex][BIND_BUTTON] = atoi(strtok(NULL, "="));
-				bindCmdArgs[bindIndex][BIND_ARG] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_ARG_A] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_ARG_B] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_ARG_C] = atoi(strtok(NULL, "&"));
+				bindCmdArgs[bindIndex][BIND_ARG_D] = atoi(strtok(NULL, "&"));
 				bindCmdArgs[bindIndex][BIND_MODE] = atoi(strtok(NULL, "|"));
-				// if (flagSerialDebug && bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
-				// 	Serial.print(F("  BIND_BUTTON:"));
-				// 	Serial.print(bindCmdArgs[bindIndex][BIND_BUTTON]);
-				// 	Serial.print(F("  BIND_ARG:"));
-				// 	Serial.print(bindCmdArgs[bindIndex][BIND_ARG]);
-				// 	Serial.print(F("  BIND_MODE:"));
-				// 	Serial.println(bindCmdArgs[bindIndex][BIND_MODE]);
-				// }
 			}
-			if (bindCmdArgs[bindIndex][BIND_ARG] != NULL) {
-				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(bindCmdArgs[bindIndex][BIND_ARG]);
+			if (bindCmdArgs[bindIndex][BIND_MODE] != 0) {
+				// Do the actual bindings for each layer
+				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(LAYER_A, bindCmdArgs[bindIndex][BIND_ARG_A]);
+				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(LAYER_B, bindCmdArgs[bindIndex][BIND_ARG_B]);
+				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(LAYER_C, bindCmdArgs[bindIndex][BIND_ARG_C]);
+				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putKeymap(LAYER_D, bindCmdArgs[bindIndex][BIND_ARG_D]);
+				// Set the binding buttonmode
 				controller.buttons[bindCmdArgs[bindIndex][BIND_BUTTON]].putControlType((keyType)bindCmdArgs[bindIndex][BIND_MODE]);
-				if (flagSerialDebug) {
-					Serial.print(F(" b"));
-					Serial.print(int(bindCmdArgs[bindIndex][BIND_BUTTON]));
-					Serial.print(F("="));
-					Serial.print(int(bindCmdArgs[bindIndex][BIND_ARG]));
-					Serial.print(F("&"));
-					Serial.print(int(bindCmdArgs[bindIndex][BIND_MODE]));
-				}
-			}
-		}
-		if (flagSerialDebug) {
-			Serial.println();
-		}
-	}
-}
-
-void cmdUnbind(char* arg) {
-	int unbindCmdArgs[MAX_BIND_COMMANDS][BIND_CMD_SEGMENTS] = {NULL, NULL};
-	if (arg != "\0") {
-		if (flagSerialDebug) {
-				Serial.print(F("Unbinding buttons "));
-		}
-		for (uint8_t unbindIndex = 0; unbindIndex < MAX_BIND_COMMANDS; unbindIndex++) {
-			// Split off each individual passed bind argument, delim by & for blocks and % for cmd/arg
-			if (unbindIndex == 0) {
-				unbindCmdArgs[unbindIndex][BIND_BUTTON] = atoi(strtok(arg, "&"));
-			} else {
-				unbindCmdArgs[unbindIndex][BIND_BUTTON] = atoi(strtok(NULL, "&"));
-			}
-			if ( unbindCmdArgs[unbindIndex][BIND_BUTTON] != NULL ) {
-				controller.buttons[unbindCmdArgs[unbindIndex][BIND_BUTTON]].putKeymap(0x00);
-				if (flagSerialDebug) {
-					Serial.print(F(" b"));
-					Serial.print(unbindCmdArgs[unbindIndex][BIND_BUTTON]);
+			
+				// Debug
+				if (flagSerialDebug){
+					Serial.print(F("  BIND_BUTTON:"));
+					Serial.print(bindCmdArgs[bindIndex][BIND_BUTTON]);
+					Serial.print(F("  BIND_ARG_A:"));
+					Serial.print(bindCmdArgs[bindIndex][BIND_ARG_A]);
+					Serial.print(F("  BIND_ARG_B:"));
+					Serial.print(bindCmdArgs[bindIndex][BIND_ARG_B]);
+					Serial.print(F("  BIND_ARG_C:"));
+					Serial.print(bindCmdArgs[bindIndex][BIND_ARG_C]);
+					Serial.print(F("  BIND_ARG_D:"));
+					Serial.print(bindCmdArgs[bindIndex][BIND_ARG_D]);
+					Serial.print(F("  BIND_MODE:"));
+					Serial.println(bindCmdArgs[bindIndex][BIND_MODE]);
 				}
 			}
 		}
@@ -580,6 +591,10 @@ void cmdReportAnalog() {
 }
 
 void cmdSetAxis(char* arg) {
+	// Example sring:
+	// stax 0=0&511&1023&200&65&94&0&1
+	// axis# = low & mid & high & deadzone & keyup & keydown & analogmode & invert
+	// Sent one at a time
 	uint16_t axisArgs[AXIS_CMD_SEGMENTS] = {NULL};
 	if (arg != "\0") {
 		if (flagSerialDebug) {
@@ -614,4 +629,32 @@ void cmdSetAxis(char* arg) {
 		controller.axes[cur_axis].setAnalogMode(axisArgs[6]);
 		controller.axes[cur_axis].setInvert(axisArgs[7]);
 	}
+}
+
+void cmdStartCalibration() {
+	// stca
+	for (uint8_t i = 0; i < HW_AXES; i++) {
+		controller.axes[i].setCalibrate(true);
+	}
+}
+
+void cmdFetchCalibration() {
+	// gtca
+	// axis = low & center & high | axis = low & center & high
+	// 0=270&540&807|1=237&532&783
+	// 0=269&536&807|1=239&534&783
+	for (uint8_t i = 0; i < HW_AXES; i++) {
+		controller.axes[i].setCalibrate(false);
+		Serial.print(i);
+		Serial.print(F("="));
+		Serial.print(controller.axes[i].getThresholdLow());
+		Serial.print(F("&"));
+		Serial.print(controller.axes[i].getCenter());
+		Serial.print(F("&"));
+		Serial.print(controller.axes[i].getThresholdHigh());
+		if (i < HW_AXES - 1) {
+			Serial.print("|");
+		}
+	}
+	Serial.println();
 }
