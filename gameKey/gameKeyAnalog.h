@@ -25,10 +25,7 @@ class gk_analog {
 		uint8_t keyDigitalDown;
 		bool analogMode;
 		bool invert;
-<<<<<<< HEAD
-=======
 		bool calibrate;
->>>>>>> layersupport
 		
 		// Internal working numbers
 		uint16_t readAverage[READ_AVERAGE_COUNT];
@@ -52,10 +49,7 @@ class gk_analog {
 		void setKeyDown(uint8_t keyDigitalDOwn_in);
 		void setAnalogMode(bool analogMode_in);
 		void setInvert(bool invert_in);
-<<<<<<< HEAD
-=======
 		void setCalibrate(bool calibrate_in);
->>>>>>> layersupport
 		// gets
 		int8_t getAnalogPin();
 		uint16_t getThresholdLow();

@@ -4,16 +4,11 @@
 gk_button::gk_button() {
 	this->locColumn = -1;
 	this->locRow = -1;
-<<<<<<< HEAD
-	this->type = KEYB;
-	this->keymap = 0x00;
-=======
 	this->type = KEYBOARD_BUTTON;
 	this->keyA = 0x00;
 	this->keyB = 0x00;
 	this->keyC = 0x00;
 	this->keyD = 0x00;
->>>>>>> layersupport
 	this->stateCurrent = 0;
 	this->timeFlux = millis();
 }
@@ -21,16 +16,11 @@ gk_button::gk_button() {
 gk_button::gk_button(int8_t locColumn_in, int8_t locRow_in) {
 	this->locColumn = locColumn_in;
 	this->locRow = locRow_in;
-<<<<<<< HEAD
-	this->type = KEYB;
-	this->keymap = 0x00;
-=======
 	this->type = KEYBOARD_BUTTON;
 	this->keyA = 0x00;
 	this->keyB = 0x00;
 	this->keyC = 0x00;
 	this->keyD = 0x00;
->>>>>>> layersupport
 	this->stateCurrent = 0;
 	this->timeFlux = millis();
 }
@@ -57,14 +47,6 @@ void gk_button::stateSync() {
 	this->statePrev = this->stateCurrent;
 }
 
-<<<<<<< HEAD
-uint8_t gk_button::getKeymap() {
-	return(this->keymap);
-}
-
-void gk_button::putKeymap(uint8_t keymap_in) {
-	this->keymap = keymap_in;
-=======
 uint8_t gk_button::getKeymap(keyLayer layer_in) {
 	switch (layer_in)
 	{
@@ -105,7 +87,6 @@ void gk_button::putKeymap(keyLayer layer_in, uint8_t keymap_in) {
 		this->keyA = keymap_in;
 		break;
 	}
->>>>>>> layersupport
 }
 
 keyType gk_button::getControlType() {
