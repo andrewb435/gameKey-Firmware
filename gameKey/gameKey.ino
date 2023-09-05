@@ -29,7 +29,7 @@
 // gameKey interfaces
 #include "gameKeyUnit.h"
 
-const String VERSION = "2.0.0";
+const String VERSION = "2.0.1";
 
 // Comment to disable serial debug
 bool flagSerialDebug = false;
