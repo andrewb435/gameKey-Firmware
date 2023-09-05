@@ -114,7 +114,7 @@ long timestampUSB = millis();
 void setup() {
 	pinMode(CONTROL_ENABLE_PIN, INPUT_PULLUP);	// Hardware kill switch, shorted = enabled
 	getEEPROM();
-	gamepad.begin(false);	// begin joystick without autosendstate
+	gamepad.begin(true);	// begin joystick with autosendstate
 	// Set joystick axis ranges to full 16 bit
 	gamepad.setXAxisRange(-32767, 32767);
 	gamepad.setYAxisRange(-32767, 32767);
@@ -200,7 +200,7 @@ void loop() {
 			}	
 		}
 
-		//Analog Processing
+		// Analog Processing
 		for (int8_t analogIndex = 0; analogIndex < HW_AXES; analogIndex++) {
 			if (controller.axes[analogIndex].getAnalogMode()) {	// Analog mode true, map to joystick
 				mapAnalogToJoystick(analogIndex);
@@ -208,10 +208,7 @@ void loop() {
 				mapAnalogToKeyboard(analogIndex);
 			}
 		}
-		if ((millis() - timerUSB) >= timestampUSB) {
-			gamepad.sendState();
-			timestampUSB = millis();
-		}
+
 	} else {	// Hardware kill switch is open
 		Keyboard.releaseAll();	// Release all keyboard keys to prevent lockouts
 	}
